@@ -1,106 +1,109 @@
 import os
 from tensor_flow.one_layer_net_tf import OneLayerNet
-import tensorflow as tf
+import tensorflow as tf #TensorFlow — открытая программная библиотека для машинного обучения,
+# разработанная компанией Google для решения задач построения и тренировки нейронной сети с целью
+# автоматического нахождения и классификации образов, достигая качества человеческого восприятия.
 from datareader import DataReader
 from tensor_flow.vector_tf import Vector
 from datetime import datetime
 
 
-def get_max_neuron_idx(neurons):
+def get_max_neuron_idx(neurons): #получить максимальный нейрон
     max_idx = -1
     answer = -1
-    for j in range(len(neurons)):
-        if neurons[j] > answer:
+    for j in range(len(neurons)): # len (ф)-в диапазоне ф
+        # range() позволяет вам генерировать ряд чисел в рамках заданного диапазона.
+        if neurons[j] > answer:  # в теории [j] номер нейрона
             answer = neurons[j]
             max_idx = j
     return max_idx
 
-
-# Learning params
 learning_rate = 1
 num_epochs = 30
 
-# Network params
+
 input_channels = 1
 input_height = 28
 input_width = 28
 num_classes = 9
-save_histogram = False
+save_histogram = False #сохранить гистограмму
 
-# How often we want to write the tf.summary data to disk
+# Как часто мы хотим записать данные tf.summary на диск
 display_step = 1
 
-# Path for tf.summary.FileWriter and to store model checkpoints
+# Путь для tf.summary.FileWriter и для хранения контрольных точек модели
 log_path = "../tmp/log/"
 filewriter_path = log_path + datetime.now().strftime("%Y-%m-%d.%H-%M-%S") + "/"
 checkpoint_path = "../tmp/"
 
-# Create parent path if it doesn't exist
+# Создать родительский путь, если он не существует
 if not os.path.isdir(checkpoint_path):
     os.mkdir(checkpoint_path)
 
-# TF placeholder for graph input and output
+# TF заполнитель для ввода и вывода графиков
 x = tf.compat.v1.placeholder(tf.float32, [1, input_height * input_width])
 y = tf.compat.v1.placeholder(tf.float32, [None, num_classes])
-learning_val = tf.placeholder(tf.float32, [], name='learning_rate')
+learning_val = tf.compat.v1.placeholder(tf.float32, [], name='learning_rate')
 
-# Initialize model
+# инициализировать модель
 model = OneLayerNet(x, num_classes)
 
-# Link variable to model output
+
+# Связать переменную с выходом модели
 score = model.output
 
-# List of trainable variables of the layers we want to train
+# Список обучаемых переменных слоев, которые мы хотим обучить
 var_list = tf.trainable_variables()
 
-# Op for calculating the loss
+# Оп для расчета потерь
 with tf.name_scope("cross_ent"):
     loss_elem = tf.nn.sigmoid_cross_entropy_with_logits(logits=score, labels=y)
     loss = tf.reduce_mean(loss_elem)
 
-# Train op
+# поезд оп
 with tf.name_scope("train"):
-    # Get gradients of all trainable variables
+    # Получить градиенты всех обучаемых переменных
     gradients = tf.gradients(loss, var_list)
     gradients = list(zip(gradients, var_list))
 
-    # Create optimizer and apply gradient descent to the trainable variables
+    # Создать оптимизатор и применить градиентный спуск к обучаемым переменным
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     train_op = optimizer.apply_gradients(grads_and_vars=gradients)
 
 if save_histogram:
-    # Add gradients to summary
+    #Добавить градиенты в сводку
     for gradient, var in gradients:
         tf.summary.histogram(var.name + '/gradient', gradient)
 
-    # Add the variables we train to the summary
+    # Добавьте переменные, которые мы обучаем, в резюме
     for var in var_list:
         tf.summary.histogram(var.name, var)
 
 tf.summary.scalar('cross_entropy', loss)
 
-# Evaluation op: Accuracy of the model
+
+# Оценка оп: Точность модели
 with tf.name_scope("accuracy"):
     correct_pred = tf.equal(tf.argmax(score, 1), tf.argmax(y, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
-# Add the accuracy to the summary
+# Добавьте точность в резюме
 tf.summary.scalar('accuracy', accuracy)
 
-# Merge all summaries together
+# Объединить все резюме вместе
 merged_summary = tf.summary.merge_all()
 
 valid_summary = tf.Summary()
 
-# Initialize the FileWriter
+# Инициализируйте FileWriter
 writer_1 = tf.summary.FileWriter(filewriter_path + 'train')
 writer_2 = tf.summary.FileWriter(filewriter_path + 'validation')
 
-# Initialize an saver for store model checkpoints
+# Инициализируйте заставку для контрольных точек модели чекпоинт
 saver = tf.train.Saver()
 
-train_dir = 'data/train'
-test_dir = 'data/test'
+train_dir = '../data/train'
+test_dir = '../data/test'
 
 train_generator = DataReader(train_dir, [input_height, input_width], True, input_channels, num_classes).get_generator()
 test_generator = DataReader(test_dir, [input_height, input_width], False, input_channels, num_classes).get_generator()
@@ -110,19 +113,20 @@ print('Size of testing set: {}'.format(test_generator.get_data_size()))
 
 train_patterns_per_epoch = train_generator.get_data_size()
 
-# Start Tensorflow session
+# начать сеанс
 with tf.Session() as sess:
-    # Initialize all variables
+    # инициализация всех переменных
     sess.run(tf.global_variables_initializer())
 
-    # Add the model graph to TensorBoard
+    # добавит грфик модели в  TensorBoard
     writer_1.add_graph(sess.graph)
 
     print("{} Start training...".format(datetime.now()))
     print("{} Open Tensorboard by command: tensorboard --logdir {}".format(datetime.now(),
                                                       log_path))
 
-    # Loop over number of epochs
+    #
+    # Цикл по количеству эпох
     for epoch in range(num_epochs):
 
         print("{} Epoch number: {}".format(datetime.now(), epoch + 1))
@@ -135,12 +139,13 @@ with tf.Session() as sess:
             xs = vector.get_x()
             ds = vector.get_desire_outputs()
 
-            # And run the training op
+            # И запустить учебный оп
             sess.run(train_op, feed_dict={x: xs,
                                           y: ds,
                                           learning_val: learning_rate})
 
-            # Generate summary with the current batch of data and write to file
+            #
+            # Создать сводку с текущей партией данных и записать в файл
             if step % display_step == 0:
                 s = sess.run(merged_summary, feed_dict={x: xs,
                                                         y: ds})
@@ -152,7 +157,7 @@ with tf.Session() as sess:
         '''
         print("{} Saving checkpoint of model...".format(datetime.now()))
 
-        # save checkpoint of the model
+        # сохранить чекпоинт модели
         checkpoint_name = os.path.join(checkpoint_path, 'model_epoch' + str(epoch + 1) + '.ckpt')
         save_path = saver.save(sess, checkpoint_name)
 
@@ -160,7 +165,7 @@ with tf.Session() as sess:
         '''
     test_patterns_count = test_generator.get_data_size()
 
-    # Test the model on the entire test set
+    #тестирование на тестовом наборе
     print("{} Start testing".format(datetime.now()))
     passed = 0
     for _ in range(test_patterns_count):

@@ -10,7 +10,6 @@ def fc(x, num_in, num_out, name, act_func=None, initializer=tf.contrib.layers.xa
         biases = tf.get_variable('biases', [num_out],
                                  initializer=initializer)
 
-        # Matrix multiply weights and inputs and add bias
         # матричное умножение весов и добавление их смещения
         net = tf.nn.xw_plus_b(x, weights, biases, name=scope.name)
 

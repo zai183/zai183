@@ -1,6 +1,7 @@
 import tensorflow as tf
-#все это заполнитель, с помощью которого мы подаем в граф данные
 
+#все это заполнитель, с помощью которого мы подаем в граф данные
+# подробнее по https://databricks.com/tensorflow/placeholders
 x = tf.placeholder("float", None)
 y = x * 2
 
